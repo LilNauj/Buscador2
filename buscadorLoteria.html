@@ -1,0 +1,493 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Buscador de Ganadores de Lotería</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 20px;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+        }
+
+        .card {
+            background: white;
+            border-radius: 12px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.2);
+            padding: 30px;
+            margin-bottom: 20px;
+        }
+
+        .header {
+            display: flex;
+            align-items: center;
+            gap: 15px;
+            margin-bottom: 10px;
+        }
+
+        .header h1 {
+            color: #2d3748;
+            font-size: 2rem;
+        }
+
+        .header-icon {
+            font-size: 2.5rem;
+        }
+
+        .subtitle {
+            color: #718096;
+            margin-bottom: 20px;
+        }
+
+        .section-title {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            margin-bottom: 20px;
+            color: #4c51bf;
+            font-size: 1.3rem;
+        }
+
+        .upload-area {
+            border: 3px dashed #cbd5e0;
+            border-radius: 12px;
+            padding: 40px;
+            text-align: center;
+            cursor: pointer;
+            transition: all 0.3s;
+        }
+
+        .upload-area:hover {
+            border-color: #4c51bf;
+            background: #f7fafc;
+        }
+
+        .upload-area input {
+            display: none;
+        }
+
+        .upload-icon {
+            font-size: 3rem;
+            color: #a0aec0;
+            margin-bottom: 10px;
+        }
+
+        .file-info {
+            color: #2d3748;
+            font-weight: 600;
+            margin-top: 10px;
+        }
+
+        .records-count {
+            color: #718096;
+            font-size: 0.9rem;
+            margin-top: 5px;
+        }
+
+        .search-container {
+            display: flex;
+            gap: 15px;
+            margin-bottom: 15px;
+        }
+
+        .search-input {
+            flex: 1;
+            padding: 15px 20px;
+            font-size: 1.1rem;
+            border: 2px solid #cbd5e0;
+            border-radius: 8px;
+            outline: none;
+            transition: border-color 0.3s;
+        }
+
+        .search-input:focus {
+            border-color: #4c51bf;
+        }
+
+        .search-button {
+            padding: 15px 40px;
+            background: #4c51bf;
+            color: white;
+            border: none;
+            border-radius: 8px;
+            font-size: 1.1rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+        /* hhhhhhh*/
+        .search-button:hover:not(:disabled) {
+            background: #434190;
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(76, 81, 191, 0.3);
+        }
+
+        .search-button:disabled {
+            background: #cbd5e0;
+            cursor: not-allowed;
+        }
+
+        .note {
+            color: #718096;
+            font-size: 0.9rem;
+        }
+
+        .results-header {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            margin-bottom: 20px;
+            color: #22543d;
+            font-size: 1.3rem;
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            overflow: hidden;
+            border-radius: 8px;
+        }
+
+        thead {
+            background: #edf2f7;
+        }
+
+        th {
+            padding: 15px;
+            text-align: left;
+            font-weight: 600;
+            color: #2d3748;
+            border-bottom: 2px solid #cbd5e0;
+        }
+
+        td {
+            padding: 15px;
+            border-bottom: 1px solid #e2e8f0;
+            color: #4a5568;
+        }
+
+        tbody tr:hover {
+            background: #f7fafc;
+        }
+
+        .number-cell {
+            color: #4c51bf;
+            font-weight: 700;
+            font-size: 1.1rem;
+        }
+
+        .no-results {
+            background: #fefcbf;
+            border: 2px solid #f6e05e;
+            border-radius: 8px;
+            padding: 30px;
+            text-align: center;
+            color: #744210;
+        }
+
+        .loading {
+            display: none;
+            text-align: center;
+            padding: 20px;
+            color: #4c51bf;
+            font-weight: 600;
+        }
+
+        .loading.active {
+            display: block;
+        }
+
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+
+        .spinner {
+            display: inline-block;
+            width: 20px;
+            height: 20px;
+            border: 3px solid #cbd5e0;
+            border-top-color: #4c51bf;
+            border-radius: 50%;
+            animation: spin 0.6s linear infinite;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <!-- Header -->
+        <div class="card">
+            <div class="header">
+                <span class="header-icon">🏆</span>
+                <h1>Buscador de Ganadores de Lotería</h1>
+            </div>
+            <p class="subtitle">Busca todas las combinaciones posibles de un número y encuentra a los ganadores</p>
+        </div>
+
+        <!-- Upload Section -->
+        <div class="card">
+            <h2 class="section-title">📤 1. Cargar Archivo Excel</h2>
+            <label for="file-upload" class="upload-area">
+                <div class="upload-icon">📁</div>
+                <p class="file-info" id="file-name">Haz clic para seleccionar tu archivo Excel</p>
+                <p class="records-count" id="records-count">Formato: XLSX o XLS</p>
+                <input type="file" id="file-upload" accept=".xlsx,.xls">
+            </label>
+        </div>
+
+        <!-- Search Section -->
+        <div class="card">
+            <h2 class="section-title">🔍 2. Buscar Número</h2>
+            <div class="search-container">
+                <input 
+                    type="text" 
+                    id="search-input" 
+                    class="search-input" 
+                    placeholder="Ej: 4321 o 0355"
+                    maxlength="4"
+                >
+                <button id="search-button" class="search-button" disabled>
+                    🔎 Buscar
+                </button>
+            </div>
+            <p class="note">* El sistema buscará todas las combinaciones posibles del número ingresado</p>
+        </div>
+
+        <!-- Loading -->
+        <div id="loading" class="loading">
+            <span class="spinner"></span> Procesando...
+        </div>
+
+        <!-- Results Section -->
+        <div id="results-section" style="display: none;">
+            <div class="card">
+                <h2 class="results-header">
+                    👥 Ganadores Encontrados: <span id="results-count">0</span>
+                </h2>
+                <div style="overflow-x: auto;">
+                    <table id="results-table">
+                        <thead>
+                            <tr>
+                                <th>Número</th>
+                                <th>Vendedor</th>
+                                <th>Comprador</th>
+                            </tr>
+                        </thead>
+                        <tbody id="results-body">
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+
+        <!-- No Results -->
+        <div id="no-results" class="card no-results" style="display: none;">
+            <p>⚠️ No se encontraron ganadores con el número <strong id="searched-number"></strong> o sus combinaciones</p>
+        </div>
+    </div>
+
+    <script>
+        let fileData = [];
+
+        // Generar todas las combinaciones posibles
+        function generateCombinations(num) {
+            const digits = num.split('');
+            const combinations = new Set();
+            
+            function permute(arr, m = []) {
+                if (arr.length === 0) {
+                    combinations.add(m.join(''));
+                } else {
+                    for (let i = 0; i < arr.length; i++) {
+                        let curr = arr.slice();
+                        let next = curr.splice(i, 1);
+                        permute(curr.slice(), m.concat(next));
+                    }
+                }
+            }
+            
+            permute(digits);
+            return Array.from(combinations);
+        }
+
+        // Cargar archivo Excel
+        document.getElementById('file-upload').addEventListener('change', function(e) {
+            const file = e.target.files[0];
+            if (!file) return;
+
+            document.getElementById('file-name').textContent = file.name;
+            document.getElementById('loading').classList.add('active');
+
+            const reader = new FileReader();
+            
+            reader.onload = function(event) {
+                try {
+                    const data = new Uint8Array(event.target.result);
+                    const workbook = XLSX.read(data, { type: 'array' });
+                    const sheetName = workbook.SheetNames[0];
+                    const sheet = workbook.Sheets[sheetName];
+                    const jsonData = XLSX.utils.sheet_to_json(sheet, { header: 1 });
+                    
+                    // Procesar los datos - Cada persona tiene 3 números en columnas A, B, C
+                    fileData = [];
+                    
+                    for (let i = 1; i < jsonData.length; i++) {
+                        const row = jsonData[i];
+                        const vendedor = row[3]?.toString() || '';
+                        const comprador = row[4]?.toString() || '';
+                        
+                        // Agregar el número 1 (columna A)
+                        if (row[0]) {
+                            fileData.push({
+                                numero: row[0].toString(),
+                                vendedor: vendedor,
+                                comprador: comprador
+                            });
+                        }
+                        
+                        // Agregar el número 2 (columna B)
+                        if (row[1]) {
+                            fileData.push({
+                                numero: row[1].toString(),
+                                vendedor: vendedor,
+                                comprador: comprador
+                            });
+                        }
+                        
+                        // Agregar el número 3 (columna C)
+                        if (row[2]) {
+                            fileData.push({
+                                numero: row[2].toString(),
+                                vendedor: vendedor,
+                                comprador: comprador
+                            });
+                        }
+                    }
+
+                    document.getElementById('records-count').textContent = `${fileData.length} registros cargados`;
+                    document.getElementById('search-button').disabled = false;
+                    document.getElementById('loading').classList.remove('active');
+                } catch (error) {
+                    alert('Error al procesar el archivo. Asegúrate de que sea un archivo Excel válido.');
+                    document.getElementById('loading').classList.remove('active');
+                }
+            };
+            
+            reader.readAsArrayBuffer(file);
+        });
+
+        // Buscar ganadores
+        document.getElementById('search-button').addEventListener('click', function() {
+            const searchNumber = document.getElementById('search-input').value.trim();
+            
+            if (!searchNumber || fileData.length === 0) {
+                alert('Por favor ingresa un número y carga un archivo primero');
+                return;
+            }
+
+            document.getElementById('loading').classList.add('active');
+            document.getElementById('results-section').style.display = 'none';
+            document.getElementById('no-results').style.display = 'none';
+
+            // Generar combinaciones
+            const combinations = generateCombinations(searchNumber);
+            console.log('Combinaciones generadas:', combinations);
+            console.log('Total de combinaciones:', combinations.length);
+
+            // Buscar ganadores
+            const foundWinners = [];
+            
+            fileData.forEach(row => {
+                const rowNumber = row.numero.trim();
+                
+                combinations.forEach(combo => {
+                    let matched = false;
+                    
+                    // Comparación directa
+                    if (combo === rowNumber) {
+                        matched = true;
+                    }
+                    
+                    // Comparar sin ceros a la izquierda
+                    const comboInt = parseInt(combo, 10);
+                    const rowInt = parseInt(rowNumber, 10);
+                    if (!isNaN(comboInt) && !isNaN(rowInt) && comboInt === rowInt) {
+                        matched = true;
+                    }
+                    
+                    // Comparar con padding
+                    if (combo.padStart(4, '0') === rowNumber.padStart(4, '0')) {
+                        matched = true;
+                    }
+                    
+                    if (matched && rowNumber.length <= 4) {
+                        foundWinners.push({
+                            ...row,
+                            combinacion: combo,
+                            numeroOriginal: rowNumber
+                        });
+                    }
+                });
+            });
+
+            console.log('Ganadores encontrados:', foundWinners.length);
+
+            // Eliminar duplicados por número + comprador (para evitar mostrar el mismo ganador 3 veces)
+            const uniqueWinners = foundWinners.filter((winner, index, self) =>
+                index === self.findIndex((w) => 
+                    w.numero === winner.numero && w.comprador === winner.comprador
+                )
+            );
+
+            console.log('Ganadores únicos:', uniqueWinners.length);
+
+            // Mostrar resultados
+            document.getElementById('loading').classList.remove('active');
+
+            if (uniqueWinners.length > 0) {
+                document.getElementById('results-count').textContent = uniqueWinners.length;
+                const tbody = document.getElementById('results-body');
+                tbody.innerHTML = '';
+
+                uniqueWinners.forEach(winner => {
+                    const tr = document.createElement('tr');
+                    tr.innerHTML = `
+                        <td class="number-cell">${winner.numeroOriginal}</td>
+                        <td>${winner.vendedor}</td>
+                        <td>${winner.comprador}</td>
+                    `;
+                    tbody.appendChild(tr);
+                });
+
+                document.getElementById('results-section').style.display = 'block';
+            } else {
+                document.getElementById('searched-number').textContent = searchNumber;
+                document.getElementById('no-results').style.display = 'block';
+            }
+        });
+
+        // Permitir buscar con Enter
+        document.getElementById('search-input').addEventListener('keypress', function(e) {
+            if (e.key === 'Enter' && !document.getElementById('search-button').disabled) {
+                document.getElementById('search-button').click();
+            }
+        });
+    </script>
+</body>
+</html>
